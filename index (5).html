@@ -1,0 +1,386 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vineyard Wind 1 — Wave Forecast (Hs / Hmax)</title>
+<style>
+.vz{color-scheme:light;--bg:#fcfcfb;--card:#ffffff;--line:#e4e3df;--grid:#eeede9;--t1:#0b0b0b;--t2:#52514e;--t3:#7a7975;
+ --hs:#2a78d6;--hsm:#86b6ef;--hmax:#eb6834;--band:rgba(235,104,52,.14);--nws:rgba(82,81,78,.13);--wind:#1baf7a;--gust:#6250d6;--warn:#b54708;--ok:#067647}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .vz{color-scheme:dark;--bg:#1a1a19;--card:#222221;--line:#3a3a38;--grid:#2e2e2c;--t1:#f0efec;--t2:#c3c2b7;--t3:#9a998f;
+ --hs:#3987e5;--hsm:#1c5cab;--hmax:#d95926;--band:rgba(217,89,38,.2);--nws:rgba(195,194,183,.12);--wind:#199e70;--gust:#9085e9;--warn:#f79009;--ok:#47cd89}}
+:root[data-theme="dark"] .vz{color-scheme:dark;--bg:#1a1a19;--card:#222221;--line:#3a3a38;--grid:#2e2e2c;--t1:#f0efec;--t2:#c3c2b7;--t3:#9a998f;
+ --hs:#3987e5;--hsm:#1c5cab;--hmax:#d95926;--band:rgba(217,89,38,.2);--nws:rgba(195,194,183,.12);--wind:#199e70;--gust:#9085e9;--warn:#f79009;--ok:#47cd89}
+*{box-sizing:border-box}
+body{margin:0}
+.vz{background:var(--bg);color:var(--t1);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;min-height:100vh;padding:20px clamp(12px,3vw,32px) 40px}
+.vz h1{font-size:22px;margin:0 0 2px;font-weight:650;letter-spacing:-.01em}
+.vz h2{font-size:15px;margin:0 0 10px;font-weight:600}
+.sub{color:var(--t2);font-size:13px}
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:transparent;border:0;color:var(--t2);padding:6px 12px;font:inherit;cursor:pointer}
+.seg button.on{background:var(--hs);color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .k{color:var(--t2);font-size:12px}
+.tile .v{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:2px}
+.tile .v small{font-size:13px;color:var(--t2);font-weight:500;margin-left:3px}
+.tile .n{color:var(--t3);font-size:12px;margin-top:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 14px 10px;margin-bottom:16px;position:relative}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--t2);margin-bottom:6px}
+.legend i{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.legend i.box{height:10px}
+svg text{fill:var(--t3);font-size:11px}
+.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;min-width:170px;z-index:5}
+.tip b{font-weight:600}.tip .r{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+.tip .s{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--t2);font-weight:550;font-size:12px}
+th:first-child,td:first-child{text-align:left}
+.tw{overflow-x:auto}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid currentColor}
+.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}
+.notes{color:var(--t2);font-size:13px}
+.notes code{font-size:12px}
+.notes li{margin:3px 0}
+a{color:var(--hs)}
+</style>
+</head>
+<body>
+<div class="vz">
+ <div class="top">
+  <div>
+   <h1>Vineyard Wind 1 — Wave Forecast</h1>
+   <div class="sub">Lease OCS-A 0501 · ~41.05°N 70.50°W · ~15 mi S of Martha's Vineyard · <span id="fetched"></span></div>
+  </div>
+  <div class="seg" id="units"><button data-u="m" class="on">metres</button><button data-u="ft">feet</button></div>
+ </div>
+
+ <div class="tiles" id="tiles"></div>
+
+ <div class="card" id="wave-card">
+  <h2>Significant wave height (Hs) and expected maximum wave (Hmax), hourly</h2>
+  <div class="legend">
+   <span><i style="background:var(--hs)"></i>Hs (blended forecast)</span>
+   <span><i style="background:var(--hsm);height:2px"></i>Hs (wave model only)</span>
+   <span><i style="background:var(--hmax)"></i>Hmax (most probable)</span>
+   <span><i class="box" style="background:var(--band)"></i>Hmax up to 90% bound</span>
+   <span><i class="box" style="background:var(--nws)"></i>NWS seas range</span>
+   <span><i style="background:var(--t3);height:1px"></i>CTV limit</span>
+  </div>
+  <svg id="wave" width="100%" height="320"></svg>
+  <div class="tip" id="wave-tip"></div>
+ </div>
+
+ <div class="card" id="wind-card">
+  <h2>Wind at 10 m (knots)</h2>
+  <div class="legend"><span><i style="background:var(--wind)"></i>Sustained</span><span><i style="background:var(--gust)"></i>Gust</span></div>
+  <svg id="wind" width="100%" height="200"></svg>
+  <div class="tip" id="wind-tip"></div>
+ </div>
+
+ <div class="card" id="daily-card">
+  <h2>Daily summary</h2>
+  <div class="tw"><table id="daily"></table></div>
+ </div>
+
+ <div class="card notes" id="method">
+  <h2>How the forecast is built</h2>
+  <ul>
+   <li><b>Hs (wave model):</b> hourly significant wave height from the Open-Meteo marine API, which blends NOAA GFS-Wave, DWD EWAM and ECMWF WAM output for the site's grid cell (<span id="srcm"></span>).</li>
+   <li><b>Hs (blended):</b> within each NWS Boston coastal-waters forecast period for zone ANZ255 (out to 25 nm south of Martha's Vineyard and Nantucket), the model Hs is averaged 50/50 with the midpoint of the NWS "seas" range. NWS seas are reported as significant wave height. NWS issued: <span id="nwsiss"></span>.</li>
+   <li><b>Hmax:</b> uses Rayleigh statistics over a 3-hour sea state, with N = 10 800 s ÷ Tm waves (Tm is the model's mean period). Most probable Hmax = Hs·√(ln N / 2), which is about 1.9–2.0 × Hs here. The 90% bound = Hs·√(ln(N/0.105) / 2), about 2.1 × Hs.</li>
+   <li><b>CTV limit:</b> hours with blended Hs ≤ <span id="ctv"></span> m are counted as workable for crew-transfer vessels. This is a typical planning threshold, not a project-specific limit.</li>
+   <li><b>Buoy check:</b> <span id="buoy"></span>.</li>
+   <li><b>Live refresh:</b> this page pulls fresh model data and the latest NWS coastal-waters forecast every time it loads, and reloads itself every 30 minutes.</li>
+  </ul>
+  <div>Sources: <a href="https://open-meteo.com/en/docs/marine-weather-api">Open-Meteo Marine API</a> · <a href="https://marineweather.net/coastal/coastal-waters-extending-out-to-25-nm-south-of-marthas-vineyard-and-nantucket-coastal-forecast/1000">NWS ANZ255 forecast</a> · <a href="https://www.ndbc.noaa.gov/station_page.php?station=44097">NDBC 44097</a>. This is a planning aid, not a substitute for the project's contracted metocean forecast.</div>
+ </div>
+</div>
+
+<script type="module">
+async function buildData() {
+  const LAT_M = 41.042, LON_M = -70.542, LAT_W = 41.058, LON_W = -70.493, CTV = 1.5, FT = 3.28084;
+  const TZ = 'America/New_York';
+  const get = async u => { const r = await fetch(u); if (!r.ok) throw new Error(u.split('?')[0] + ' ' + r.status); return r.json(); };
+  const [m, w, nws] = await Promise.all([
+    get(`https://marine-api.open-meteo.com/v1/marine?latitude=${LAT_M}&longitude=${LON_M}&hourly=wave_height,wave_period,wave_direction,swell_wave_height,wind_wave_height&timezone=${TZ}&forecast_days=7`),
+    get(`https://api.open-meteo.com/v1/forecast?latitude=${LAT_W}&longitude=${LON_W}&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=kn&timezone=${TZ}&forecast_days=7`),
+    get('https://api.weather.gov/zones/forecast/ANZ255/forecast').catch(() => null)
+  ]);
+  const r2 = v => v == null ? null : Math.round(v * 100) / 100;
+  const r1 = v => v == null ? null : Math.round(v * 10) / 10;
+  const comp = d => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round((d % 360) / 22.5) % 16];
+  const pad = n => String(n).padStart(2, '0');
+  // local date string (America/New_York) for a Date
+  const ymd = d => { const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); return p; };
+  const addDays = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+
+  // ---- NWS periods -> [name, startKey, endKey, lo_ft, hi_ft, windText] with keys 'YYYY-MM-DDTHH'
+  const periods = [];
+  let issued = 'n/a';
+  if (nws && nws.properties && nws.properties.periods) {
+    const P = nws.properties.periods;
+    const upd = new Date(nws.properties.updated || Date.now());
+    issued = upd.toLocaleString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' ET';
+    const base = ymd(upd);
+    const nowH = +new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', hourCycle: 'h23' }).format(upd);
+    const DOW = ['sun','mon','tue','wed','thu','fri','sat'];
+    const dowOf = s => new Date(s + 'T12:00:00Z').getUTCDay();
+    const dayFor = tok => { // first date >= base matching dow token
+      const t = tok.toLowerCase().slice(0, 3); const want = DOW.indexOf(t); if (want < 0) return null;
+      for (let k = 0; k < 8; k++) { const d = addDays(base, k); if (dowOf(d) === want) return d; } return null;
+    };
+    const span = name => { // returns [start,end]
+      const n = name.toLowerCase().trim();
+      if (n === 'rest of today' || n === 'this afternoon' || n === 'today' || n === 'this morning') return [`${base}T${pad(Math.max(6, Math.min(nowH, 17)))}`, `${base}T18`];
+      if (n === 'tonight' || n === 'rest of tonight' || n === 'overnight' || n === 'this evening') return [`${base}T${pad(Math.max(18, Math.min(nowH, 23)))}`, `${addDays(base, 1)}T06`];
+      const one = s => { const night = /night/.test(s); const d = dayFor(s.split(' ')[0]); if (!d) return null; return night ? [`${d}T18`, `${addDays(d, 1)}T06`] : [`${d}T06`, `${d}T18`]; };
+      if (/ through /.test(n)) { const [a, b] = n.split(' through '); const A = one(a), Bs = one(b); if (A && Bs) return [A[0], Bs[1]]; }
+      return one(n);
+    };
+    let prevEnd = null;
+    P.forEach(p => {
+      let sp = span(p.name); if (!sp) return;
+      if (prevEnd && sp[0] < prevEnd && sp[1] <= prevEnd) { sp = [sp[0].replace(/^\d{4}-\d\d-\d\d/, addDays(sp[0].slice(0, 10), 7)), sp[1].replace(/^\d{4}-\d\d-\d\d/, addDays(sp[1].slice(0, 10), 7))]; }
+      const txt = p.detailedForecast || '';
+      let lo = null, hi = null, mm;
+      if ((mm = txt.match(/Seas (\d+) to (\d+) f(ee)?t/i))) { lo = +mm[1]; hi = +mm[2]; }
+      else if ((mm = txt.match(/Seas (?:around )?(\d+) f(?:ee|oo)?t or less/i))) { lo = 0; hi = +mm[1]; }
+      else if ((mm = txt.match(/Seas (?:around )?(\d+) f(?:ee|oo)?t/i))) { lo = +mm[1]; hi = +mm[1]; }
+      if (lo == null) return;
+      periods.push([p.name, sp[0], sp[1], lo, hi, txt.split('.')[0]]);
+      prevEnd = sp[1];
+    });
+  }
+  const nwsAt = t => { const k = t.slice(0, 13); for (const p of periods) if (k >= p[1] && k < p[2]) return p; return null; };
+
+  // ---- hourly rows
+  const wi = {}; w.hourly.time.forEach((t, i) => wi[t] = i);
+  const H = m.hourly; const rows = [];
+  H.time.forEach((t, i) => {
+    const hsm = H.wave_height[i]; if (hsm == null) return;
+    const tm = H.wave_period[i]; const p = nwsAt(t);
+    const lo = p ? p[3] / FT : null, hi = p ? p[4] / FT : null;
+    const hs = p ? 0.5 * hsm + 0.5 * ((lo + hi) / 2) : hsm;
+    const N = 10800 / (tm || 6);
+    const j = wi[t];
+    rows.push({ t, hs_model: r2(hsm), hs: r2(hs), tm: r2(tm), hmax: r2(hs * Math.sqrt(Math.log(N) / 2)), hmax90: r2(hs * Math.sqrt(Math.log(N / 0.10536) / 2)),
+      nws_lo: r2(lo), nws_hi: r2(hi), swell: r2(H.swell_wave_height[i]), windsea: r2(H.wind_wave_height[i]), wdir: H.wave_direction[i],
+      ws: j == null ? 0 : r1(w.hourly.wind_speed_10m[j]), wg: j == null ? 0 : r1(w.hourly.wind_gusts_10m[j]), wd: j == null ? 0 : w.hourly.wind_direction_10m[j] });
+  });
+
+  // ---- daily
+  const days = [...new Set(rows.map(r => r.t.slice(0, 10)))];
+  const daily = days.map(date => {
+    const R = rows.filter(r => r.t.slice(0, 10) === date);
+    const pk = R.reduce((a, b) => b.hs > a.hs ? b : a); const wm = R.reduce((a, b) => b.ws > a.ws ? b : a);
+    const np = periods.filter(p => p[1] < `${addDays(date, 1)}T00` && p[2] > `${date}T00`);
+    const dt = new Date(date + 'T12:00:00Z');
+    return { date, dow: dt.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }).replace(',', ''),
+      hs_max: pk.hs, hs_model_max: Math.max(...R.map(r => r.hs_model)), hs_min: Math.min(...R.map(r => r.hs)), peak_time: pk.t.slice(11),
+      hmax: Math.max(...R.map(r => r.hmax)), hmax90: Math.max(...R.map(r => r.hmax90)), tm: pk.tm, wdir: comp(pk.wdir),
+      nws: np.length ? `${Math.min(...np.map(p => p[3]))}–${Math.max(...np.map(p => p[4]))} ft` : '—',
+      ws_max: wm.ws, wg_max: Math.max(...R.map(r => r.wg)), wd: comp(wm.wd), ops_hours: R.filter(r => r.hs <= CTV).length, hours: R.length };
+  });
+  const now = new Date();
+  const fetched = `${ymd(now)}T${new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now)} ET`;
+  return { rows, daily, meta: { fetched, source_marine: `Open-Meteo Marine API (best_match wave model), point ${LAT_M}N ${-LON_M}W`, source_wind: `Open-Meteo Forecast API (best_match), point ${LAT_W}N ${-LON_W}W`,
+    nws: { issued, periods }, buoy: {}, ctv: CTV } };
+}
+
+let D;
+try { D = await buildData(); } catch (e) { document.body.insertAdjacentHTML('afterbegin', '<p style="padding:12px;color:#b54708">Could not load forecast data ('+String(e.message||e)+'). Retrying in 5 minutes.</p>'); setTimeout(() => location.reload(), 300000); throw e; }
+setTimeout(() => location.reload(), 30 * 60 * 1000);
+let U = 'm';
+const F = 3.28084;
+const cv = v => v == null ? null : (U === 'm' ? v : v * F);
+const fmt = (v, d = 1) => v == null ? '—' : cv(v).toFixed(U === 'm' ? d : 1);
+const ul = () => U === 'm' ? 'm' : 'ft';
+const css = n => getComputedStyle(document.querySelector('.vz')).getPropertyValue(n).trim();
+const NS = 'http://www.w3.org/2000/svg';
+const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const parseT = s => new Date(s + ':00');
+const comp = d => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round((d % 360) / 22.5) % 16];
+
+document.getElementById('fetched').textContent = 'data pulled ' + D.meta.fetched.replace('T', ' ');
+document.getElementById('srcm').textContent = D.meta.source_marine;
+document.getElementById('nwsiss').textContent = (D.meta.nws && D.meta.nws.issued) || 'n/a';
+document.getElementById('ctv').textContent = D.meta.ctv;
+const B = D.meta.buoy || {};
+document.getElementById('buoy').innerHTML = 'live buoy readings are not loaded on this page; check <a href="https://www.ndbc.noaa.gov/station_page.php?station=44097">NDBC 44097 Block Island</a>, about 60 km west of the site';
+
+function nowIdx() {
+  const n = new Date(); let best = 0;
+  D.rows.forEach((r, i) => { if (parseT(r.t) <= n) best = i; });
+  return best;
+}
+
+function tiles() {
+  const i0 = nowIdx(), r0 = D.rows[i0];
+  const today = D.daily[0], tmr = D.daily[1];
+  const peak = D.rows.slice(i0).reduce((a, b) => b.hs > a.hs ? b : a, r0);
+  const pk = parseT(peak.t);
+  const T = [
+    ['Hs now (blended)', fmt(r0.hs, 2), `Tm ${r0.tm.toFixed(1)} s · waves from ${comp(r0.wdir)}`],
+    ['Hmax now (most probable)', fmt(r0.hmax, 2), `90% bound ${fmt(r0.hmax90, 2)} ${ul()}`],
+    ['Tomorrow: Hs / Hmax', `${fmt(tmr.hs_max)} / ${fmt(tmr.hmax)}`, `${tmr.dow} · NWS ${tmr.nws}`],
+    ['7-day peak Hs', fmt(peak.hs, 2), `${pk.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${peak.t.slice(11)} · Hmax ${fmt(peak.hmax)} ${ul()}`],
+  ];
+  const box = document.getElementById('tiles'); box.textContent = '';
+  T.forEach(([k, v, n], j) => {
+    const d = document.createElement('div'); d.className = 'tile'; d.id = 'tile-' + j;
+    const a = document.createElement('div'); a.className = 'k'; a.textContent = k;
+    const b = document.createElement('div'); b.className = 'v'; b.textContent = v;
+    const s = document.createElement('small'); s.textContent = ul(); b.appendChild(s);
+    const c = document.createElement('div'); c.className = 'n'; c.textContent = n;
+    d.append(a, b, c); box.appendChild(d);
+  });
+}
+
+function chart(svgId, tipId, series, opts) {
+  const svg = document.getElementById(svgId), tip = document.getElementById(tipId);
+  svg.textContent = '';
+  const W = svg.clientWidth || 800, H = +svg.getAttribute('height');
+  const m = { l: 40, r: 12, t: 8, b: 26 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const R = D.rows, n = R.length;
+  const x = i => m.l + (i / (n - 1)) * iw;
+  const ymax = opts.ymax();
+  const step = opts.step(ymax);
+  const top = Math.ceil(ymax / step) * step;
+  const y = v => m.t + ih - (v / top) * ih;
+  // grid + y labels
+  for (let v = 0; v <= top + 1e-9; v += step) {
+    el('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: css('--grid') }, svg);
+    const t = el('text', { x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end' }, svg); t.textContent = +v.toFixed(1);
+  }
+  // day separators + labels
+  R.forEach((r, i) => {
+    if (r.t.endsWith('T00:00')) {
+      el('line', { x1: x(i), x2: x(i), y1: m.t, y2: m.t + ih, stroke: css('--line') }, svg);
+      if (i < n - 6) { const t = el('text', { x: x(i) + 4, y: H - 8 }, svg); t.textContent = parseT(r.t).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }); }
+    }
+  });
+  opts.under && opts.under(svg, x, y, m, ih);
+  series.forEach(s => {
+    if (s.band) {
+      let d = ''; R.forEach((r, i) => d += (i ? 'L' : 'M') + x(i) + ',' + y(s.hi(r)));
+      for (let i = n - 1; i >= 0; i--) d += 'L' + x(i) + ',' + y(s.lo(R[i]));
+      el('path', { d: d + 'Z', fill: css(s.color), stroke: 'none' }, svg);
+    } else {
+      let d = ''; R.forEach((r, i) => d += (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(s.v(r)).toFixed(1));
+      el('path', { d, fill: 'none', stroke: css(s.color), 'stroke-width': s.w || 2, 'stroke-linejoin': 'round', 'stroke-dasharray': s.dash || '' }, svg);
+    }
+  });
+  // now marker
+  const ni = nowIdx();
+  el('line', { x1: x(ni), x2: x(ni), y1: m.t, y2: m.t + ih, stroke: css('--t2'), 'stroke-dasharray': '2 3' }, svg);
+  const nt = el('text', { x: x(ni) + 4, y: m.t + 10 }, svg); nt.textContent = 'now';
+  // hover
+  const cross = el('line', { y1: m.t, y2: m.t + ih, stroke: css('--t2'), visibility: 'hidden' }, svg);
+  const dots = series.filter(s => !s.band && !s.nodot).map(s => el('circle', { r: 4, fill: css(s.color), stroke: css('--card'), 'stroke-width': 2, visibility: 'hidden' }, svg));
+  const hit = el('rect', { x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent' }, svg);
+  const move = ev => {
+    const rc = svg.getBoundingClientRect();
+    const px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rc.left;
+    const i = Math.max(0, Math.min(n - 1, Math.round((px - m.l) / iw * (n - 1))));
+    const r = R[i];
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('visibility', 'visible');
+    series.filter(s => !s.band && !s.nodot).forEach((s, k) => { dots[k].setAttribute('cx', x(i)); dots[k].setAttribute('cy', y(s.v(r))); dots[k].setAttribute('visibility', 'visible'); });
+    tip.textContent = '';
+    const h = document.createElement('b'); h.textContent = parseT(r.t).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric' }); tip.appendChild(h);
+    opts.tipRows(r).forEach(([lab, val, col]) => {
+      const d = document.createElement('div'); d.className = 'r';
+      const a = document.createElement('span'); if (col) { const s = document.createElement('span'); s.className = 's'; s.style.background = css(col); a.appendChild(s); }
+      a.appendChild(document.createTextNode(lab));
+      const b = document.createElement('span'); b.textContent = val; d.append(a, b); tip.appendChild(d);
+    });
+    tip.style.display = 'block';
+    const card = svg.parentElement, tw = tip.offsetWidth;
+    let left = x(i) + 14; if (left + tw > card.clientWidth - 8) left = x(i) - tw - 14;
+    tip.style.left = Math.max(4, left) + 'px'; tip.style.top = (svg.offsetTop + 10) + 'px';
+  };
+  const leave = () => { tip.style.display = 'none'; cross.setAttribute('visibility', 'hidden'); dots.forEach(d => d.setAttribute('visibility', 'hidden')); };
+  hit.addEventListener('mousemove', move); hit.addEventListener('touchmove', move, { passive: true });
+  hit.addEventListener('touchstart', move, { passive: true });
+  hit.addEventListener('mouseleave', leave); hit.addEventListener('touchend', leave);
+}
+
+function drawWave() {
+  chart('wave', 'wave-tip', [
+    { band: true, color: '--band', lo: r => cv(r.hmax), hi: r => cv(r.hmax90) },
+    { v: r => cv(r.hs_model), color: '--hsm', w: 1.5, dash: '4 3', nodot: true },
+    { v: r => cv(r.hmax), color: '--hmax' },
+    { v: r => cv(r.hs), color: '--hs' },
+  ], {
+    ymax: () => Math.max(...D.rows.map(r => cv(r.hmax90)), ...D.rows.filter(r => r.nws_hi).map(r => cv(r.nws_hi))),
+    step: t => U === 'm' ? (t > 6 ? 2 : 1) : (t > 20 ? 5 : 2),
+    under: (svg, x, y, m, ih) => {
+      // NWS ranges
+      let i = 0; const R = D.rows;
+      while (i < R.length) {
+        if (R[i].nws_lo == null) { i++; continue; }
+        let j = i; while (j + 1 < R.length && R[j + 1].nws_lo === R[i].nws_lo && R[j + 1].nws_hi === R[i].nws_hi) j++;
+        el('rect', { x: x(i), width: Math.max(1, x(j) - x(i)), y: y(cv(R[i].nws_hi)), height: y(cv(R[i].nws_lo)) - y(cv(R[i].nws_hi)), fill: css('--nws') }, svg);
+        i = j + 1;
+      }
+      const yc = y(cv(D.meta.ctv));
+      el('line', { x1: m.l, x2: svg.clientWidth - 12, y1: yc, y2: yc, stroke: css('--t3'), 'stroke-dasharray': '6 4' }, svg);
+      const t = el('text', { x: svg.clientWidth - 14, y: yc - 4, 'text-anchor': 'end' }, svg); t.textContent = 'CTV limit ' + fmt(D.meta.ctv) + ' ' + ul();
+    },
+    tipRows: r => [
+      ['Hs blended', fmt(r.hs, 2) + ' ' + ul(), '--hs'],
+      ['Hs model', fmt(r.hs_model, 2) + ' ' + ul(), '--hsm'],
+      ['NWS seas', r.nws_lo == null ? '—' : fmt(r.nws_lo) + '–' + fmt(r.nws_hi) + ' ' + ul()],
+      ['Hmax (most prob.)', fmt(r.hmax, 2) + ' ' + ul(), '--hmax'],
+      ['Hmax 90%', fmt(r.hmax90, 2) + ' ' + ul()],
+      ['Swell / wind-sea', fmt(r.swell) + ' / ' + fmt(r.windsea) + ' ' + ul()],
+      ['Mean period', r.tm.toFixed(1) + ' s'],
+      ['Waves from', comp(r.wdir) + ' (' + r.wdir + '°)'],
+    ],
+  });
+}
+
+function drawWind() {
+  chart('wind', 'wind-tip', [
+    { v: r => r.wg, color: '--gust', w: 1.5 },
+    { v: r => r.ws, color: '--wind' },
+  ], {
+    ymax: () => Math.max(...D.rows.map(r => r.wg)),
+    step: t => t > 30 ? 10 : 5,
+    tipRows: r => [['Wind', r.ws.toFixed(0) + ' kt', '--wind'], ['Gust', r.wg.toFixed(0) + ' kt', '--gust'], ['From', comp(r.wd) + ' (' + r.wd + '°)']],
+  });
+}
+
+function table() {
+  const t = document.getElementById('daily'); t.textContent = '';
+  const hd = ['Day', `Hs (${ul()})`, 'Peak at', `Hmax (${ul()})`, `Hmax 90% (${ul()})`, 'NWS seas', `Model Hs (${ul()})`, 'Tm (s)', 'Waves from', 'Wind / gust (kt)', 'CTV hours'];
+  const tr = document.createElement('tr'); hd.forEach(h => { const th = document.createElement('th'); th.textContent = h; tr.appendChild(th); });
+  const th = document.createElement('thead'); th.appendChild(tr); t.appendChild(th);
+  const tb = document.createElement('tbody');
+  D.daily.forEach(d => {
+    const r = document.createElement('tr');
+    const cells = [d.dow, fmt(d.hs_max, 2), d.peak_time, fmt(d.hmax, 2), fmt(d.hmax90, 2), d.nws, fmt(d.hs_model_max, 2), d.tm.toFixed(1), d.wdir, `${d.ws_max.toFixed(0)} ${d.wd} / ${d.wg_max.toFixed(0)}`];
+    cells.forEach(c => { const td = document.createElement('td'); td.textContent = c; r.appendChild(td); });
+    const td = document.createElement('td'); const p = document.createElement('span');
+    p.className = 'pill ' + (d.ops_hours >= d.hours * 0.5 ? 'ok' : 'warn'); p.textContent = `${d.ops_hours}/${d.hours} h`;
+    td.appendChild(p); r.appendChild(td); tb.appendChild(r);
+  });
+  t.appendChild(tb);
+}
+
+function render() { tiles(); drawWave(); drawWind(); table(); }
+document.querySelectorAll('#units button').forEach(b => b.addEventListener('click', () => {
+  U = b.dataset.u; document.querySelectorAll('#units button').forEach(x => x.classList.toggle('on', x === b)); render();
+}));
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+render();
+</script>
+</body>
+</html>
+
+</body></html>

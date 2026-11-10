@@ -47,6 +47,38 @@ th:first-child,td:first-child{text-align:left}
 .notes code{font-size:12px}
 .notes li{margin:3px 0}
 a{color:var(--hs)}
+
+/* ---- fit-to-screen layout (default; add ?full for the long page) ---- */
+html.fit,html.fit body{height:100%;overflow:hidden}
+html.fit .vz{height:100vh;min-height:0;overflow:hidden;padding:1.6vh 1.6vw;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:1.4vh;font-size:clamp(11px,1.25vh,18px)}
+html.fit .top,html.fit .tiles,html.fit .card{margin:0}
+html.fit .vz h1{font-size:clamp(16px,2.6vh,34px)}
+html.fit .vz h2{font-size:clamp(12px,1.6vh,22px);margin-bottom:.6vh}
+html.fit .sub{font-size:clamp(11px,1.4vh,18px)}
+html.fit .seg{display:none}
+html.fit .tiles{grid-template-columns:repeat(4,1fr);gap:1vw}
+html.fit .tile{padding:1vh 1vw}
+html.fit .tile .k,html.fit .tile .n{font-size:clamp(11px,1.4vh,18px)}
+html.fit .tile .v{font-size:clamp(20px,3.6vh,46px)}
+html.fit .main{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);grid-template-rows:minmax(0,1.6fr) minmax(0,1fr);gap:1.4vh 1vw;min-height:0}
+html.fit #wave-card{grid-column:1;grid-row:1}
+html.fit #wind-card{grid-column:1;grid-row:2}
+html.fit #daily-card{grid-column:2;grid-row:1 / span 2;overflow:hidden}
+html.fit .card{display:flex;flex-direction:column;min-height:0;padding:1.2vh 1vw .6vh}
+html.fit .card svg{flex:1 1 0;min-height:0;height:auto}
+html.fit .legend{font-size:clamp(10px,1.3vh,16px);margin-bottom:.4vh}
+html.fit svg text{font-size:clamp(10px,1.3vh,16px)}
+html.fit #method{display:none}
+html.fit table{font-size:clamp(11px,1.6vh,22px)}
+html.fit th{font-size:clamp(10px,1.4vh,18px)}
+html.fit th,html.fit td{padding:.75vh .4vw}
+html.fit .pill{font-size:clamp(10px,1.4vh,18px)}
+html.fit #daily th:nth-child(3),html.fit #daily td:nth-child(3),html.fit #daily th:nth-child(5),html.fit #daily td:nth-child(5),
+html.fit #daily th:nth-child(7),html.fit #daily td:nth-child(7),html.fit #daily th:nth-child(8),html.fit #daily td:nth-child(8),
+html.fit #daily th:nth-child(9),html.fit #daily td:nth-child(9){display:none}
+html.fit .tw{overflow:hidden;flex:1 1 0;min-height:0}
+html.fit #daily{height:100%}
+html.fit #daily thead tr{height:1px}
 </style>
 </head>
 <body>
@@ -61,6 +93,7 @@ a{color:var(--hs)}
 
  <div class="tiles" id="tiles"></div>
 
+ <div class="main">
  <div class="card" id="wave-card">
   <h2>Significant wave height (Hs) and expected maximum wave (Hmax), hourly</h2>
   <div class="legend">
@@ -87,6 +120,7 @@ a{color:var(--hs)}
   <div class="tw"><table id="daily"></table></div>
  </div>
 
+ </div>
  <div class="card notes" id="method">
   <h2>How the forecast is built</h2>
   <ul>
@@ -101,6 +135,7 @@ a{color:var(--hs)}
  </div>
 </div>
 
+<script>if(!/[?&]full\b/.test(location.search))document.documentElement.classList.add("fit");</script>
 <script type="module">
 async function buildData() {
   const LAT_M = 41.042, LON_M = -70.542, LAT_W = 41.058, LON_W = -70.493, CTV = 1.5, FT = 3.28084;
@@ -244,7 +279,7 @@ function tiles() {
 function chart(svgId, tipId, series, opts) {
   const svg = document.getElementById(svgId), tip = document.getElementById(tipId);
   svg.textContent = '';
-  const W = svg.clientWidth || 800, H = +svg.getAttribute('height');
+  const W = svg.clientWidth || 800, H = document.documentElement.classList.contains('fit') ? (svg.clientHeight || +svg.getAttribute('height')) : +svg.getAttribute('height');
   const m = { l: 40, r: 12, t: 8, b: 26 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
   const R = D.rows, n = R.length;
